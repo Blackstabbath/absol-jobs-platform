@@ -1,0 +1,43 @@
+{% extends "matching/base.html" %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">Match score</p>
+    <h1>{{ match.total_score }}% · {{ match.candidate.full_name }}</h1>
+    <p class="muted">{{ match.job.title }} at {{ match.job.employer.name }}</p>
+  </div>
+  <form method="post" action="{% url 'create_draft' match.pk %}">
+    {% csrf_token %}
+    <button class="button primary" type="submit">Generate application draft</button>
+  </form>
+</section>
+<section class="grid two">
+  <div>
+    <h2>Score breakdown</h2>
+    <div class="list">
+      {% for key, item in match.breakdown.items %}
+        <div class="breakdown"><span>{{ key|title }}</span><strong>{{ item.score }}%</strong></div>
+      {% endfor %}
+    </div>
+  </div>
+  <div>
+    <h2>Review</h2>
+    <form method="post" class="stack">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button class="button" type="submit">Update status</button>
+    </form>
+  </div>
+</section>
+<section class="grid two">
+  <div>
+    <h2>Reasons</h2>
+    <ul>{% for reason in match.reasons %}<li>{{ reason }}</li>{% empty %}<li>No reasons recorded.</li>{% endfor %}</ul>
+  </div>
+  <div>
+    <h2>Must-have review</h2>
+    <ul>{% for failure in match.must_have_failures %}<li>{{ failure }}</li>{% empty %}<li>No must-have failures.</li>{% endfor %}</ul>
+  </div>
+</section>
+{% endblock %}

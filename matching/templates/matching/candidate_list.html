@@ -1,0 +1,28 @@
+{% extends "matching/base.html" %}
+
+{% block content %}
+<section class="page-head">
+  <h1>Candidates</h1>
+  <div class="actions">
+    <a class="button" href="{% url 'import_candidates' %}">Import</a>
+    <a class="button primary" href="{% url 'candidate_create' %}">New candidate</a>
+  </div>
+</section>
+<table>
+  <thead><tr><th>Name</th><th>Email</th><th>Location</th><th>Experience</th><th>Status</th><th>Matches</th></tr></thead>
+  <tbody>
+    {% for candidate in candidates %}
+      <tr>
+        <td><a href="{{ candidate.get_absolute_url }}">{{ candidate.full_name }}</a></td>
+        <td>{{ candidate.email }}</td>
+        <td>{{ candidate.location|default:"-" }}</td>
+        <td>{{ candidate.years_experience }} years</td>
+        <td><span class="status">{{ candidate.get_status_display }}</span></td>
+        <td>{{ candidate.match_count }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6">No candidates yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

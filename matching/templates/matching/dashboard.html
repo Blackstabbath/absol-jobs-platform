@@ -1,0 +1,41 @@
+{% extends "matching/base.html" %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">Internal matching desk</p>
+    <h1>Application control room</h1>
+  </div>
+  <div class="actions">
+    <a class="button primary" href="{% url 'candidate_create' %}">New candidate</a>
+    <a class="button" href="{% url 'job_create' %}">New job</a>
+  </div>
+</section>
+
+<section class="metrics">
+  <div><strong>{{ candidate_count }}</strong><span>Candidates</span></div>
+  <div><strong>{{ open_job_count }}</strong><span>Open jobs</span></div>
+  <div><strong>{{ draft_count }}</strong><span>Drafts</span></div>
+  <div><strong>{{ sent_count }}</strong><span>Sent</span></div>
+</section>
+
+<section class="grid two">
+  <div>
+    <h2>Top matches</h2>
+    {% include "matching/partials/match_table.html" with matches=top_matches compact=True %}
+  </div>
+  <div>
+    <h2>Recent drafts</h2>
+    <div class="list">
+      {% for draft in recent_drafts %}
+        <a class="row-link" href="{% url 'application_detail' draft.pk %}">
+          <span>{{ draft.match_score.candidate }} to {{ draft.match_score.job.employer }}</span>
+          <span class="status">{{ draft.get_status_display }}</span>
+        </a>
+      {% empty %}
+        <p class="muted">No application drafts yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "matching/base.html" %}
+
+{% block content %}
+<section class="page-head"><h1>Scoring weights</h1></section>
+<table>
+  <thead><tr><th>Criterion</th><th>Weight</th><th>Enabled</th></tr></thead>
+  <tbody>
+    {% for weight in weights %}
+      <tr>
+        <td><a href="{% url 'weight_edit' weight.pk %}">{{ weight.label }}</a></td>
+        <td>{{ weight.weight }}</td>
+        <td>{{ weight.enabled|yesno:"Yes,No" }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

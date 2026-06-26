@@ -1,0 +1,23 @@
+{% extends "matching/base.html" %}
+
+{% block content %}
+<section class="page-head">
+  <h1>{{ title }}</h1>
+</section>
+<form method="post" enctype="multipart/form-data" class="form-panel">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+  {% for field in form %}
+    <label class="field">
+      <span>{{ field.label }}</span>
+      {{ field }}
+      {% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}
+      {{ field.errors }}
+    </label>
+  {% endfor %}
+  <div class="actions">
+    <button class="button primary" type="submit">Save</button>
+    <a class="button" href="{{ request.META.HTTP_REFERER|default:'/' }}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

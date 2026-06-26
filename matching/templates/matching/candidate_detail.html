@@ -1,0 +1,38 @@
+{% extends "matching/base.html" %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">Candidate</p>
+    <h1>{{ candidate.full_name }}</h1>
+    <p class="muted">{{ candidate.email }} · {{ candidate.location|default:"No location" }}</p>
+  </div>
+  <div class="actions">
+    <a class="button" href="{% url 'candidate_document_add' candidate.pk %}">Upload document</a>
+    <a class="button primary" href="{% url 'candidate_edit' candidate.pk %}">Edit</a>
+  </div>
+</section>
+<section class="grid two">
+  <div>
+    <h2>Profile</h2>
+    <dl class="details">
+      <dt>Skills</dt><dd>{{ candidate.skills|default:"-" }}</dd>
+      <dt>Work authorization</dt><dd>{{ candidate.work_authorization|default:"-" }}</dd>
+      <dt>Experience</dt><dd>{{ candidate.years_experience }} years</dd>
+      <dt>Summary</dt><dd>{{ candidate.summary|linebreaksbr|default:"-" }}</dd>
+    </dl>
+  </div>
+  <div>
+    <h2>Documents</h2>
+    <div class="list">
+      {% for document in documents %}
+        <a class="row-link" href="{{ document.file.url }}"><span>{{ document.get_document_type_display }}</span><span>{{ document.file.name }}</span></a>
+      {% empty %}
+        <p class="muted">No documents uploaded.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+<h2>Matches</h2>
+{% include "matching/partials/match_table.html" with matches=matches %}
+{% endblock %}

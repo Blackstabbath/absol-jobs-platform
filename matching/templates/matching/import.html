@@ -1,0 +1,15 @@
+{% extends "matching/base.html" %}
+
+{% block content %}
+<section class="page-head">
+  <h1>{{ title }}</h1>
+</section>
+<form method="post" enctype="multipart/form-data" class="form-panel narrow">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button class="button primary" type="submit">Import file</button>
+</form>
+<section class="note">
+  <p>Accepted formats: CSV or XLSX. Candidate imports require first_name, last_name, email. Job imports require employer and title.</p>
+</section>
+{% endblock %}

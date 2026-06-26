@@ -1,0 +1,21 @@
+{% extends "matching/base.html" %}
+
+{% block content %}
+<section class="page-head"><h1>Applications</h1></section>
+<table>
+  <thead><tr><th>Candidate</th><th>Job</th><th>Recipient</th><th>Status</th><th>Created</th></tr></thead>
+  <tbody>
+    {% for draft in drafts %}
+      <tr>
+        <td><a href="{% url 'application_detail' draft.pk %}">{{ draft.match_score.candidate.full_name }}</a></td>
+        <td>{{ draft.match_score.job.title }} · {{ draft.match_score.job.employer.name }}</td>
+        <td>{{ draft.recipient_email }}</td>
+        <td><span class="status">{{ draft.get_status_display }}</span></td>
+        <td>{{ draft.created_at|date:"M j, Y H:i" }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5">No drafts yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

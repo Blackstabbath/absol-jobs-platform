@@ -1,0 +1,40 @@
+{% extends "matching/base.html" %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">Application draft</p>
+    <h1>{{ draft.match_score.candidate.full_name }} to {{ draft.match_score.job.employer.name }}</h1>
+    <p class="muted">Status: {{ draft.get_status_display }}</p>
+  </div>
+  {% if draft.status != "sent" %}
+    <form method="post" action="{% url 'send_application' draft.pk %}">
+      {% csrf_token %}
+      <button class="button danger" type="submit">Approve and send</button>
+    </form>
+  {% endif %}
+</section>
+<form method="post" class="form-panel">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+  {% for field in form %}
+    <label class="field">
+      <span>{{ field.label }}</span>
+      {{ field }}
+      {{ field.errors }}
+    </label>
+  {% endfor %}
+  <button class="button primary" type="submit">Save draft</button>
+</form>
+<section>
+  <h2>Attachments</h2>
+  <div class="list">
+    {% for attachment in draft.attachments %}
+      <div class="row-link"><span>{{ attachment.name }}</span><span>{{ attachment.type }}</span></div>
+    {% empty %}
+      <p class="muted">No resume attachment found for this candidate.</p>
+    {% endfor %}
+  </div>
+  {% if draft.failure_message %}<p class="message error">{{ draft.failure_message }}</p>{% endif %}
+</section>
+{% endblock %}

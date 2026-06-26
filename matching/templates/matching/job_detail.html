@@ -1,0 +1,32 @@
+{% extends "matching/base.html" %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">{{ job.employer.name }}</p>
+    <h1>{{ job.title }}</h1>
+    <p class="muted">{{ job.location|default:"No location" }}{% if job.remote_allowed %} · Remote allowed{% endif %}</p>
+  </div>
+  <div class="actions">
+    <form method="post" action="{% url 'score_job' job.pk %}">
+      {% csrf_token %}
+      <button class="button primary" type="submit">Score candidates</button>
+    </form>
+    <a class="button" href="{% url 'job_edit' job.pk %}">Edit</a>
+  </div>
+</section>
+<section class="grid two">
+  <dl class="details">
+    <dt>Application email</dt><dd>{{ job.application_email|default:"Missing" }}</dd>
+    <dt>Required skills</dt><dd>{{ job.required_skills|default:"-" }}</dd>
+    <dt>Preferred skills</dt><dd>{{ job.preferred_skills|default:"-" }}</dd>
+  </dl>
+  <dl class="details">
+    <dt>Experience</dt><dd>{{ job.min_years_experience }} years minimum</dd>
+    <dt>Authorization</dt><dd>{{ job.work_authorization|default:"-" }}</dd>
+    <dt>Description</dt><dd>{{ job.description|linebreaksbr|default:"-" }}</dd>
+  </dl>
+</section>
+<h2>Candidate scores</h2>
+{% include "matching/partials/match_table.html" with matches=matches %}
+{% endblock %}

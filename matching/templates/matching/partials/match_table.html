@@ -1,0 +1,16 @@
+<table>
+  <thead><tr><th>Score</th><th>Candidate</th><th>Job</th><th>Status</th><th>Failures</th></tr></thead>
+  <tbody>
+    {% for match in matches %}
+      <tr>
+        <td><a class="score" href="{% url 'match_detail' match.pk %}">{{ match.total_score }}%</a></td>
+        <td>{{ match.candidate.full_name }}</td>
+        <td>{{ match.job.title }} · {{ match.job.employer.name }}</td>
+        <td><span class="status">{{ match.get_status_display }}</span></td>
+        <td>{{ match.must_have_failures|length }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5">No matches yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>

@@ -1,0 +1,6 @@
+{% extends "matching/base.html" %}
+
+{% block content %}
+<section class="page-head"><h1>Matches</h1></section>
+{% include "matching/partials/match_table.html" with matches=matches %}
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "matching/base.html" %}
+
+{% block title %}Log in - Absol Jobs{% endblock %}
+
+{% block content %}
+<section class="auth-panel">
+  <h1>Internal login</h1>
+  <form method="post" class="stack">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="button primary" type="submit">Log in</button>
+  </form>
+</section>
+{% endblock %}
