@@ -25,6 +25,44 @@ class UploadForm(forms.Form):
     file = forms.FileField(validators=[validate_upload_file], widget=forms.FileInput(attrs={"class": "control"}))
 
 
+class CandidateDirectoryFilterForm(forms.Form):
+    VIEW_CHOICES = (("cards", "Card view"), ("table", "Table view"))
+    DENSITY_CHOICES = (("detailed", "Detailed cards"), ("compact", "Compact cards"))
+    YES_NO_CHOICES = (("", "Any"), ("yes", "Yes"), ("no", "No"))
+
+    q = forms.CharField(required=False, label="Search")
+    view = forms.ChoiceField(required=False, choices=VIEW_CHOICES, initial="cards")
+    density = forms.ChoiceField(required=False, choices=DENSITY_CHOICES, initial="detailed")
+    status = forms.ChoiceField(required=False)
+    skill = forms.ChoiceField(required=False)
+    location = forms.ChoiceField(required=False)
+    nationality = forms.ChoiceField(required=False)
+    education = forms.ChoiceField(required=False)
+    english = forms.ChoiceField(required=False)
+    computer = forms.ChoiceField(required=False)
+    migration_country = forms.ChoiceField(required=False)
+    passport = forms.ChoiceField(required=False, choices=YES_NO_CHOICES)
+    documents = forms.ChoiceField(required=False, choices=YES_NO_CHOICES)
+    consent = forms.ChoiceField(required=False, choices=YES_NO_CHOICES)
+
+    def __init__(self, *args, choices=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        choices = choices or {}
+        self.fields["status"].choices = [("", "Any status")] + list(Candidate.Status.choices)
+        for field_name, label in [
+            ("skill", "Any skill"),
+            ("location", "Any location"),
+            ("nationality", "Any nationality"),
+            ("education", "Any education"),
+            ("english", "Any English level"),
+            ("computer", "Any computer level"),
+            ("migration_country", "Any relocation country"),
+        ]:
+            self.fields[field_name].choices = [("", label)] + [(value, value) for value in choices.get(field_name, [])]
+        for field in self.fields.values():
+            field.widget.attrs.setdefault("class", "control")
+
+
 class CandidateForm(StyledFormMixin, forms.ModelForm):
     class Meta:
         model = Candidate

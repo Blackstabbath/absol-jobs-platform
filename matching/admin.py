@@ -5,6 +5,9 @@ from .models import (
     ApplicationSendLog,
     Candidate,
     CandidateDocument,
+    CandidateExperience,
+    CandidateProfile,
+    CandidateSkill,
     DocumentTemplate,
     Employer,
     Job,
@@ -18,12 +21,41 @@ class CandidateDocumentInline(admin.TabularInline):
     extra = 0
 
 
+class CandidateSkillInline(admin.TabularInline):
+    model = CandidateSkill
+    extra = 0
+
+
+class CandidateExperienceInline(admin.TabularInline):
+    model = CandidateExperience
+    extra = 0
+
+
 @admin.register(Candidate)
 class CandidateAdmin(admin.ModelAdmin):
     list_display = ("full_name", "email", "location", "years_experience", "status")
     list_filter = ("status", "willing_remote")
     search_fields = ("first_name", "last_name", "email", "skills", "summary")
-    inlines = [CandidateDocumentInline]
+    inlines = [CandidateDocumentInline, CandidateSkillInline, CandidateExperienceInline]
+
+
+@admin.register(CandidateProfile)
+class CandidateProfileAdmin(admin.ModelAdmin):
+    list_display = ("candidate", "nationality", "education_level", "english_speaking", "valid_passport")
+    search_fields = ("candidate__first_name", "candidate__last_name", "nationality", "migration_countries")
+    readonly_fields = ("raw_answers",)
+
+
+@admin.register(CandidateSkill)
+class CandidateSkillAdmin(admin.ModelAdmin):
+    list_display = ("candidate", "name", "years_experience")
+    search_fields = ("candidate__first_name", "candidate__last_name", "name")
+
+
+@admin.register(CandidateExperience)
+class CandidateExperienceAdmin(admin.ModelAdmin):
+    list_display = ("candidate", "skill", "years_experience")
+    search_fields = ("candidate__first_name", "candidate__last_name", "skill", "details")
 
 
 class JobInline(admin.TabularInline):

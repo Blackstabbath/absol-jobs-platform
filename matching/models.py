@@ -81,6 +81,106 @@ class CandidateDocument(TimestampedModel):
         return f"{self.candidate} - {self.get_document_type_display()}"
 
 
+class CandidateProfile(TimestampedModel):
+    candidate = models.OneToOneField(Candidate, on_delete=models.CASCADE, related_name="profile")
+    raw_answers = models.JSONField(default=dict)
+    gender = models.CharField(max_length=80, blank=True)
+    date_of_birth = models.CharField(max_length=80, blank=True)
+    aims_number = models.CharField(max_length=120, blank=True)
+    nationality = models.CharField(max_length=160, blank=True)
+    arrival_year = models.CharField(max_length=20, blank=True)
+    majlis = models.CharField(max_length=160, blank=True)
+    unhcr_registration = models.TextField(blank=True)
+    marital_status = models.CharField(max_length=120, blank=True)
+    education_level = models.CharField(max_length=180, blank=True)
+    field_of_study = models.CharField(max_length=220, blank=True)
+    institution = models.CharField(max_length=220, blank=True)
+    education_year = models.CharField(max_length=40, blank=True)
+    education_country = models.CharField(max_length=160, blank=True)
+    education_verified = models.CharField(max_length=120, blank=True)
+    english_speaking = models.CharField(max_length=120, blank=True)
+    english_reading_writing = models.CharField(max_length=120, blank=True)
+    english_test = models.CharField(max_length=180, blank=True)
+    english_score = models.CharField(max_length=120, blank=True)
+    basic_computer_skills = models.CharField(max_length=120, blank=True)
+    computer_skill_level = models.CharField(max_length=120, blank=True)
+    willing_to_migrate = models.CharField(max_length=120, blank=True)
+    migration_countries = models.TextField(blank=True)
+    migration_reason = models.TextField(blank=True)
+    health_conditions = models.TextField(blank=True)
+    linkedin_url = models.URLField(blank=True)
+    valid_passport = models.CharField(max_length=120, blank=True)
+    passport_expiry = models.CharField(max_length=80, blank=True)
+    can_find_own_employer = models.CharField(max_length=120, blank=True)
+    source = models.CharField(max_length=220, blank=True)
+    consent_truthful = models.CharField(max_length=80, blank=True)
+    consent_database = models.CharField(max_length=80, blank=True)
+    consent_share = models.CharField(max_length=80, blank=True)
+    consent_contact = models.CharField(max_length=80, blank=True)
+    consent_more_documents = models.CharField(max_length=80, blank=True)
+    consent_data_storage = models.CharField(max_length=80, blank=True)
+    photo_document_upload = models.TextField(blank=True)
+    resume_upload = models.TextField(blank=True)
+    education_upload = models.TextField(blank=True)
+    certification_upload = models.TextField(blank=True)
+    additional_notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["candidate__last_name", "candidate__first_name"]
+
+    def __str__(self):
+        return f"SARP profile for {self.candidate}"
+
+    @property
+    def document_readiness(self):
+        available = [
+            bool(self.resume_upload),
+            bool(self.education_upload),
+            bool(self.certification_upload),
+            bool(self.photo_document_upload),
+        ]
+        return sum(available), len(available)
+
+    @property
+    def consent_complete(self):
+        values = [
+            self.consent_truthful,
+            self.consent_database,
+            self.consent_share,
+            self.consent_contact,
+            self.consent_more_documents,
+            self.consent_data_storage,
+        ]
+        return all(str(value).strip().lower() in {"yes", "true", "i agree", "agreed", "1"} for value in values if value)
+
+
+class CandidateSkill(TimestampedModel):
+    candidate = models.ForeignKey(Candidate, on_delete=models.CASCADE, related_name="skill_records")
+    name = models.CharField(max_length=220)
+    years_experience = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
+    source_label = models.CharField(max_length=220, blank=True)
+
+    class Meta:
+        ordering = ["candidate", "name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.candidate})"
+
+
+class CandidateExperience(TimestampedModel):
+    candidate = models.ForeignKey(Candidate, on_delete=models.CASCADE, related_name="experience_records")
+    skill = models.CharField(max_length=220, blank=True)
+    years_experience = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
+    details = models.TextField(blank=True)
+    source_label = models.CharField(max_length=220, blank=True)
+
+    class Meta:
+        ordering = ["candidate", "skill", "id"]
+
+    def __str__(self):
+        return f"{self.skill or 'Experience'} ({self.candidate})"
+
+
 class Employer(TimestampedModel):
     name = models.CharField(max_length=180, unique=True)
     contact_name = models.CharField(max_length=160, blank=True)

@@ -1,11 +1,12 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from .forms import (
     ApplicationDraftForm,
+    CandidateDirectoryFilterForm,
     CandidateDocumentForm,
     CandidateForm,
     DocumentTemplateForm,
@@ -19,6 +20,8 @@ from .models import (
     ApplicationDraft,
     Candidate,
     CandidateDocument,
+    CandidateProfile,
+    CandidateSkill,
     DocumentTemplate,
     Employer,
     Job,
@@ -51,6 +54,126 @@ def candidate_list(request):
     return render(request, "matching/candidate_list.html", {"candidates": candidates})
 
 
+def distinct_values(queryset, field_name):
+    return [
+        value
+        for value in queryset.exclude(**{field_name: ""}).values_list(field_name, flat=True).distinct().order_by(field_name)
+        if value
+    ][:100]
+
+
+def directory_filter_choices():
+    profiles = CandidateProfile.objects.all()
+    return {
+        "skill": distinct_values(CandidateSkill.objects.all(), "name"),
+        "location": distinct_values(Candidate.objects.all(), "location"),
+        "nationality": distinct_values(profiles, "nationality"),
+        "education": distinct_values(profiles, "education_level"),
+        "english": distinct_values(profiles, "english_speaking"),
+        "computer": distinct_values(profiles, "computer_skill_level"),
+        "migration_country": sorted(
+            {
+                part.strip()
+                for value in profiles.exclude(migration_countries="").values_list("migration_countries", flat=True)
+                for part in value.replace(";", ",").replace("|", ",").split(",")
+                if part.strip()
+            }
+        )[:100],
+    }
+
+
+def truthy_filter(queryset, field_name, value):
+    if value == "yes":
+        return queryset.exclude(**{field_name: ""})
+    if value == "no":
+        return queryset.filter(Q(**{field_name: ""}) | Q(**{field_name + "__isnull": True}))
+    return queryset
+
+
+@login_required
+def candidate_directory(request):
+    choices = directory_filter_choices()
+    form = CandidateDirectoryFilterForm(request.GET or None, choices=choices)
+    candidates = (
+        Candidate.objects.select_related("profile")
+        .prefetch_related("skill_records", "experience_records", "documents")
+        .annotate(match_count=Count("match_scores"))
+    )
+
+    if form.is_valid():
+        data = form.cleaned_data
+        if data.get("q"):
+            query = data["q"]
+            candidates = candidates.filter(
+                Q(first_name__icontains=query)
+                | Q(last_name__icontains=query)
+                | Q(email__icontains=query)
+                | Q(phone__icontains=query)
+                | Q(location__icontains=query)
+                | Q(skills__icontains=query)
+                | Q(education__icontains=query)
+                | Q(certifications__icontains=query)
+                | Q(summary__icontains=query)
+                | Q(relevant_experience__icontains=query)
+                | Q(profile__raw_answers__icontains=query)
+                | Q(skill_records__name__icontains=query)
+                | Q(experience_records__details__icontains=query)
+            )
+        if data.get("status"):
+            candidates = candidates.filter(status=data["status"])
+        if data.get("skill"):
+            candidates = candidates.filter(Q(skill_records__name=data["skill"]) | Q(skills__icontains=data["skill"]))
+        if data.get("location"):
+            candidates = candidates.filter(location=data["location"])
+        if data.get("nationality"):
+            candidates = candidates.filter(profile__nationality=data["nationality"])
+        if data.get("education"):
+            candidates = candidates.filter(profile__education_level=data["education"])
+        if data.get("english"):
+            candidates = candidates.filter(profile__english_speaking=data["english"])
+        if data.get("computer"):
+            candidates = candidates.filter(profile__computer_skill_level=data["computer"])
+        if data.get("migration_country"):
+            candidates = candidates.filter(profile__migration_countries__icontains=data["migration_country"])
+        if data.get("passport"):
+            candidates = truthy_filter(candidates, "profile__valid_passport", data["passport"])
+        if data.get("documents") == "yes":
+            candidates = candidates.filter(
+                Q(profile__resume_upload__gt="")
+                | Q(profile__education_upload__gt="")
+                | Q(profile__certification_upload__gt="")
+                | Q(profile__photo_document_upload__gt="")
+                | Q(documents__isnull=False)
+            )
+        elif data.get("documents") == "no":
+            candidates = candidates.filter(
+                Q(profile__resume_upload="")
+                & Q(profile__education_upload="")
+                & Q(profile__certification_upload="")
+                & Q(profile__photo_document_upload="")
+                & Q(documents__isnull=True)
+            )
+        if data.get("consent") == "yes":
+            candidates = candidates.exclude(profile__consent_share="").exclude(profile__consent_contact="")
+        elif data.get("consent") == "no":
+            candidates = candidates.filter(Q(profile__consent_share="") | Q(profile__consent_contact=""))
+
+    candidates = candidates.distinct()
+    view_mode = form.cleaned_data.get("view", "cards") if form.is_valid() else "cards"
+    density = form.cleaned_data.get("density", "detailed") if form.is_valid() else "detailed"
+    return render(
+        request,
+        "matching/candidate_directory.html",
+        {
+            "form": form,
+            "candidates": candidates,
+            "candidate_count": candidates.count(),
+            "view_mode": view_mode,
+            "density": density,
+        },
+    )
+
+
 @login_required
 def candidate_create(request):
     form = CandidateForm(request.POST or None)
@@ -74,13 +197,25 @@ def candidate_edit(request, pk):
 
 @login_required
 def candidate_detail(request, pk):
-    candidate = get_object_or_404(Candidate, pk=pk)
+    candidate = get_object_or_404(
+        Candidate.objects.select_related("profile").prefetch_related("skill_records", "experience_records", "documents"),
+        pk=pk,
+    )
     documents = candidate.documents.all()
+    skills = candidate.skill_records.all()
+    experiences = candidate.experience_records.all()
     matches = candidate.match_scores.select_related("job", "job__employer")[:20]
     return render(
         request,
         "matching/candidate_detail.html",
-        {"candidate": candidate, "documents": documents, "matches": matches},
+        {
+            "candidate": candidate,
+            "documents": documents,
+            "skills": skills,
+            "experiences": experiences,
+            "matches": matches,
+            "raw_answers": getattr(candidate, "profile", None).raw_answers.items() if hasattr(candidate, "profile") else [],
+        },
     )
 
 

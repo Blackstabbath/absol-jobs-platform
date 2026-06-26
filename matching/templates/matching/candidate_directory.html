@@ -1,0 +1,96 @@
+{% extends "matching/base.html" %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <p class="eyebrow">Candidate directory</p>
+    <h1>Find the right people faster</h1>
+    <p class="muted">{{ candidate_count }} candidates match the current filters.</p>
+  </div>
+  <div class="actions">
+    <a class="button" href="{% url 'candidate_list' %}">Data table</a>
+    <a class="button" href="{% url 'import_candidates' %}">Import</a>
+    <a class="button primary" href="{% url 'candidate_create' %}">New candidate</a>
+  </div>
+</section>
+
+<form method="get" class="filter-panel">
+  <label class="field wide"><span>Search</span>{{ form.q }}</label>
+  <label class="field"><span>View</span>{{ form.view }}</label>
+  <label class="field"><span>Card size</span>{{ form.density }}</label>
+  <label class="field"><span>Status</span>{{ form.status }}</label>
+  <label class="field"><span>Skill</span>{{ form.skill }}</label>
+  <label class="field"><span>Location</span>{{ form.location }}</label>
+  <label class="field"><span>Nationality</span>{{ form.nationality }}</label>
+  <label class="field"><span>Education</span>{{ form.education }}</label>
+  <label class="field"><span>English</span>{{ form.english }}</label>
+  <label class="field"><span>Computer</span>{{ form.computer }}</label>
+  <label class="field"><span>Relocation</span>{{ form.migration_country }}</label>
+  <label class="field"><span>Passport</span>{{ form.passport }}</label>
+  <label class="field"><span>Documents</span>{{ form.documents }}</label>
+  <label class="field"><span>Consent</span>{{ form.consent }}</label>
+  <div class="filter-actions">
+    <button class="button primary" type="submit">Apply filters</button>
+    <a class="button" href="{% url 'candidate_directory' %}">Clear</a>
+  </div>
+</form>
+
+{% if view_mode == "table" %}
+  <table>
+    <thead><tr><th>Name</th><th>Location</th><th>Skills</th><th>English</th><th>Passport</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for candidate in candidates %}
+        <tr>
+          <td><a href="{{ candidate.get_absolute_url }}">{{ candidate.full_name }}</a><br><span class="muted">{{ candidate.email }}</span></td>
+          <td>{{ candidate.location|default:"-" }}</td>
+          <td>{{ candidate.skills|truncatechars:120|default:"-" }}</td>
+          <td>{{ candidate.profile.english_speaking|default:"-" }}</td>
+          <td>{{ candidate.profile.valid_passport|default:"-" }}</td>
+          <td><span class="status">{{ candidate.get_status_display }}</span></td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6">No candidates match these filters.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <section class="candidate-cards {% if density == 'compact' %}compact{% endif %}">
+    {% for candidate in candidates %}
+      <article class="candidate-card">
+        <header>
+          <div>
+            <p class="eyebrow">{{ candidate.profile.nationality|default:candidate.get_status_display }}</p>
+            <h2><a href="{{ candidate.get_absolute_url }}">{{ candidate.full_name }}</a></h2>
+          </div>
+          <span class="score">{{ candidate.years_experience }}y</span>
+        </header>
+        <p class="muted">{{ candidate.location|default:"No location" }}{% if candidate.profile.migration_countries %} · wants {{ candidate.profile.migration_countries|truncatechars:46 }}{% endif %}</p>
+        <div class="chip-row">
+          {% for skill in candidate.skill_records.all|slice:":4" %}
+            <span class="chip">{{ skill.name }}</span>
+          {% empty %}
+            <span class="chip">No skills listed</span>
+          {% endfor %}
+        </div>
+        {% if density != "compact" %}
+          <dl class="mini-facts">
+            <dt>Education</dt><dd>{{ candidate.profile.education_level|default:candidate.education|truncatechars:60|default:"-" }}</dd>
+            <dt>English</dt><dd>{{ candidate.profile.english_speaking|default:"-" }}</dd>
+            <dt>Computer</dt><dd>{{ candidate.profile.computer_skill_level|default:"-" }}</dd>
+            <dt>Passport</dt><dd>{{ candidate.profile.valid_passport|default:"-" }}</dd>
+            <dt>Documents</dt><dd>{{ candidate.profile.resume_upload|yesno:"Resume noted,No resume noted" }}</dd>
+            <dt>Consent</dt><dd>{{ candidate.profile.consent_share|default:"-" }}</dd>
+          </dl>
+          <p>{{ candidate.summary|truncatechars:170|default:candidate.relevant_experience|truncatechars:170 }}</p>
+        {% endif %}
+        <footer>
+          <a class="button" href="{{ candidate.get_absolute_url }}">Open profile</a>
+          <span class="status">{{ candidate.match_count }} matches</span>
+        </footer>
+      </article>
+    {% empty %}
+      <p class="muted">No candidates match these filters.</p>
+    {% endfor %}
+  </section>
+{% endif %}
+{% endblock %}

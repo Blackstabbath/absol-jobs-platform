@@ -10,6 +10,9 @@ from .models import (
     ApplicationDraft,
     Candidate,
     CandidateDocument,
+    CandidateExperience,
+    CandidateProfile,
+    CandidateSkill,
     DocumentTemplate,
     Employer,
     Job,
@@ -135,6 +138,35 @@ class ImportTests(TestCase):
         self.assertIn("Welding", candidate.skills)
         self.assertEqual(candidate.years_experience, 4)
         self.assertIn("Built furniture", candidate.relevant_experience)
+        self.assertTrue(CandidateProfile.objects.filter(candidate=candidate).exists())
+        self.assertEqual(CandidateSkill.objects.filter(candidate=candidate).count(), 2)
+        self.assertEqual(CandidateExperience.objects.filter(candidate=candidate).count(), 2)
+        self.assertIn("Full Name (as per UNHCR or ID)", candidate.profile.raw_answers)
+
+    def test_sarp_profile_preserves_relocation_language_and_consent(self):
+        upload = SimpleUploadedFile(
+            "sarp-rich.csv",
+            (
+                '"Full Name (as per UNHCR or ID)","Email Address","Nationality","Which place you are currently living in",'
+                '"How well do you speak English?","  Please select your computer skill level   ",'
+                '"Are you willing to migrate if you are selected for a job-based opportunity?  ",'
+                '"  Which countries are you interested in migrating to? (select all that apply)  ",'
+                '"  Do you have a valid passport?  ",'
+                '"   I authorize ARCMY/Humanity First to share my profile with verified employers and immigration platforms (such as Talent Beyond Boundaries, TalentLift)  ",'
+                '"   I agree to be contacted via WhatsApp, phone, or email for opportunities matching my profile   "\n'
+                '"Sara Ali","sara@example.com","Afghan","Malaysia","Good","Intermediate","Yes","Canada, Australia","Yes","Yes","Yes"\n'
+            ).encode(),
+            content_type="text/csv",
+        )
+
+        import_candidates(upload)
+        profile = Candidate.objects.get(email="sara@example.com").profile
+
+        self.assertEqual(profile.nationality, "Afghan")
+        self.assertEqual(profile.english_speaking, "Good")
+        self.assertEqual(profile.computer_skill_level, "Intermediate")
+        self.assertIn("Canada", profile.migration_countries)
+        self.assertEqual(profile.valid_passport, "Yes")
 
 
 class ApplicationTests(FixtureMixin, TestCase):
@@ -185,5 +217,41 @@ class PermissionTests(TestCase):
         response = self.client.get(reverse("dashboard"))
 
         self.assertEqual(response.status_code, 200)
+
+    def test_candidate_directory_requires_login(self):
+        response = self.client.get(reverse("candidate_directory"))
+
+        self.assertEqual(response.status_code, 302)
+
+    def test_candidate_directory_filters_by_skill(self):
+        User.objects.create_user(username="admin", password="pass12345")
+        self.client.login(username="admin", password="pass12345")
+        candidate = Candidate.objects.create(
+            first_name="Amina",
+            last_name="Khan",
+            email="amina@example.com",
+            skills="Carpentry",
+            location="Malaysia",
+        )
+        CandidateProfile.objects.create(candidate=candidate, nationality="Pakistani", english_speaking="Good")
+        CandidateSkill.objects.create(candidate=candidate, name="Carpentry")
+
+        response = self.client.get(reverse("candidate_directory"), {"skill": "Carpentry"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Amina Khan")
+        self.assertContains(response, "Carpentry")
+
+    def test_candidate_detail_shows_original_answers(self):
+        User.objects.create_user(username="admin", password="pass12345")
+        self.client.login(username="admin", password="pass12345")
+        candidate = Candidate.objects.create(first_name="Omar", last_name="Noor", email="omar@example.com")
+        CandidateProfile.objects.create(candidate=candidate, raw_answers={"Original Question": "Original Answer"})
+
+        response = self.client.get(reverse("candidate_detail", args=[candidate.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Original Question")
+        self.assertContains(response, "Original Answer")
 
 # Create your tests here.

@@ -14,8 +14,12 @@
 </section>
 <section class="grid two">
   <div>
-    <h2>Profile</h2>
+    <h2>Basic profile</h2>
     <dl class="details">
+      <dt>Email</dt><dd>{{ candidate.email }}</dd>
+      <dt>Phone</dt><dd>{{ candidate.phone|default:"-" }}</dd>
+      <dt>Location</dt><dd>{{ candidate.location|default:"-" }}</dd>
+      <dt>Nationality</dt><dd>{{ candidate.profile.nationality|default:"-" }}</dd>
       <dt>Skills</dt><dd>{{ candidate.skills|default:"-" }}</dd>
       <dt>Work authorization</dt><dd>{{ candidate.work_authorization|default:"-" }}</dd>
       <dt>Experience</dt><dd>{{ candidate.years_experience }} years</dd>
@@ -33,6 +37,116 @@
     </div>
   </div>
 </section>
+<section class="copy-panel">
+  <h2>Copy-ready snippets</h2>
+  <div class="snippet-grid">
+    <div>
+      <h3>Candidate summary</h3>
+      <pre data-copy-text>{{ candidate.full_name }} is based in {{ candidate.location|default:"-" }} with {{ candidate.years_experience }} years of experience. Skills: {{ candidate.skills|default:"-" }}. {{ candidate.summary }}</pre>
+      <button class="button" data-copy-trigger>Copy</button>
+    </div>
+    <div>
+      <h3>Employer pitch</h3>
+      <pre data-copy-text>{{ candidate.full_name }} appears suitable for roles requiring {{ candidate.skills|default:"their listed skills" }}. Education: {{ candidate.education|default:"-" }}. Relocation readiness: {{ candidate.profile.willing_to_migrate|default:"-" }} {{ candidate.profile.migration_countries|default:"" }}.</pre>
+      <button class="button" data-copy-trigger>Copy</button>
+    </div>
+  </div>
+</section>
+<section class="dossier-grid">
+  <div>
+    <h2>SARP / resettlement</h2>
+    <dl class="details">
+      <dt>AIMS</dt><dd>{{ candidate.profile.aims_number|default:"-" }}</dd>
+      <dt>UNHCR / registration</dt><dd>{{ candidate.profile.unhcr_registration|linebreaksbr|default:"-" }}</dd>
+      <dt>Majlis</dt><dd>{{ candidate.profile.majlis|default:"-" }}</dd>
+      <dt>Status</dt><dd>{{ candidate.summary|default:"-"|linebreaksbr }}</dd>
+      <dt>Arrival year</dt><dd>{{ candidate.profile.arrival_year|default:"-" }}</dd>
+    </dl>
+  </div>
+  <div>
+    <h2>Education and certificates</h2>
+    <dl class="details">
+      <dt>Level</dt><dd>{{ candidate.profile.education_level|default:"-" }}</dd>
+      <dt>Field</dt><dd>{{ candidate.profile.field_of_study|default:"-" }}</dd>
+      <dt>Institution</dt><dd>{{ candidate.profile.institution|default:"-" }}</dd>
+      <dt>Country/year</dt><dd>{{ candidate.profile.education_country|default:"-" }} {{ candidate.profile.education_year|default:"" }}</dd>
+      <dt>Verified</dt><dd>{{ candidate.profile.education_verified|default:"-" }}</dd>
+      <dt>Certificates</dt><dd>{{ candidate.certifications|linebreaksbr|default:"-" }}</dd>
+    </dl>
+  </div>
+  <div>
+    <h2>Language and computer</h2>
+    <dl class="details">
+      <dt>Speaking</dt><dd>{{ candidate.profile.english_speaking|default:"-" }}</dd>
+      <dt>Reading/writing</dt><dd>{{ candidate.profile.english_reading_writing|default:"-" }}</dd>
+      <dt>Test</dt><dd>{{ candidate.profile.english_test|default:"-" }}</dd>
+      <dt>Score</dt><dd>{{ candidate.profile.english_score|default:"-" }}</dd>
+      <dt>Computer basics</dt><dd>{{ candidate.profile.basic_computer_skills|default:"-" }}</dd>
+      <dt>Computer level</dt><dd>{{ candidate.profile.computer_skill_level|default:"-" }}</dd>
+    </dl>
+  </div>
+  <div>
+    <h2>Relocation readiness</h2>
+    <dl class="details">
+      <dt>Willing</dt><dd>{{ candidate.profile.willing_to_migrate|default:"-" }}</dd>
+      <dt>Countries</dt><dd>{{ candidate.profile.migration_countries|default:"-" }}</dd>
+      <dt>Reason</dt><dd>{{ candidate.profile.migration_reason|linebreaksbr|default:"-" }}</dd>
+      <dt>Passport</dt><dd>{{ candidate.profile.valid_passport|default:"-" }}</dd>
+      <dt>Expiry</dt><dd>{{ candidate.profile.passport_expiry|default:"-" }}</dd>
+      <dt>Health notes</dt><dd>{{ candidate.profile.health_conditions|linebreaksbr|default:"-" }}</dd>
+    </dl>
+  </div>
+</section>
+<section>
+  <h2>Skills and work experience</h2>
+  <div class="experience-list">
+    {% for experience in experiences %}
+      <article class="experience-item">
+        <h3>{{ experience.skill|default:"Experience" }}{% if experience.years_experience %} · {{ experience.years_experience }} years{% endif %}</h3>
+        <p>{{ experience.details|linebreaksbr|default:"No detail provided." }}</p>
+      </article>
+    {% empty %}
+      <p class="muted">No structured work history available.</p>
+    {% endfor %}
+  </div>
+</section>
+<section class="grid two">
+  <div>
+    <h2>Consent and authorization</h2>
+    <dl class="details">
+      <dt>Truthful</dt><dd>{{ candidate.profile.consent_truthful|default:"-" }}</dd>
+      <dt>Database</dt><dd>{{ candidate.profile.consent_database|default:"-" }}</dd>
+      <dt>Share profile</dt><dd>{{ candidate.profile.consent_share|default:"-" }}</dd>
+      <dt>Contact</dt><dd>{{ candidate.profile.consent_contact|default:"-" }}</dd>
+      <dt>More docs</dt><dd>{{ candidate.profile.consent_more_documents|default:"-" }}</dd>
+      <dt>Data storage</dt><dd>{{ candidate.profile.consent_data_storage|default:"-" }}</dd>
+    </dl>
+  </div>
+  <div>
+    <h2>Uploaded-form document fields</h2>
+    <dl class="details">
+      <dt>ID/photo</dt><dd>{{ candidate.profile.photo_document_upload|default:"-" }}</dd>
+      <dt>Resume/CV</dt><dd>{{ candidate.profile.resume_upload|default:"-" }}</dd>
+      <dt>Education</dt><dd>{{ candidate.profile.education_upload|default:"-" }}</dd>
+      <dt>Certifications</dt><dd>{{ candidate.profile.certification_upload|default:"-" }}</dd>
+    </dl>
+  </div>
+</section>
 <h2>Matches</h2>
 {% include "matching/partials/match_table.html" with matches=matches %}
+<section>
+  <h2>Original CSV answers</h2>
+  <div class="answer-list">
+    {% for question, answer in raw_answers %}
+      {% if answer %}
+        <details>
+          <summary>{{ question }}</summary>
+          <p>{{ answer|linebreaksbr }}</p>
+        </details>
+      {% endif %}
+    {% empty %}
+      <p class="muted">No original SARP answers stored for this candidate yet.</p>
+    {% endfor %}
+  </div>
+</section>
 {% endblock %}

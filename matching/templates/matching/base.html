@@ -13,6 +13,7 @@
     {% if user.is_authenticated %}
       <nav>
         <a href="{% url 'candidate_list' %}">Candidates</a>
+        <a href="{% url 'candidate_directory' %}">Directory</a>
         <a href="{% url 'job_list' %}">Jobs</a>
         <a href="{% url 'match_list' %}">Matches</a>
         <a href="{% url 'application_list' %}">Applications</a>
@@ -37,5 +38,6 @@
     {% endif %}
     {% block content %}{% endblock %}
   </main>
+  <script src="{% static 'matching/app.js' %}"></script>
 </body>
 </html>

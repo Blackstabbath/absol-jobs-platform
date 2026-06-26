@@ -5,7 +5,7 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
-from matching.models import Candidate, Employer, Job
+from matching.models import Candidate, CandidateExperience, CandidateProfile, CandidateSkill, Employer, Job
 
 
 def _rows_from_csv(uploaded_file):
@@ -66,6 +66,10 @@ def normalise_label(value):
     return re.sub(r"\s+", " ", value).strip()
 
 
+def base_label(value):
+    return re.sub(r"__\d+$", "", str(value or "")).strip()
+
+
 def cell(row, *names, default=""):
     lower_map = {str(key).strip().lower(): value for key, value in row.items()}
     for name in names:
@@ -90,6 +94,15 @@ def fuzzy_values(row, *patterns):
         if value not in (None, "") and all(pattern.lower() in label for pattern in patterns):
             values.append(str(value).strip())
     return values
+
+
+def fuzzy_items(row, *patterns):
+    items = []
+    for key, value in row.items():
+        label = normalise_label(key)
+        if value not in (None, "") and all(pattern.lower() in label for pattern in patterns):
+            items.append((key, str(value).strip()))
+    return items
 
 
 def first_available(row, exact_names=(), fuzzy_patterns=(), default=""):
@@ -160,19 +173,19 @@ def import_sarp_candidate(row, index):
     if not first_name:
         return None, f"Row {index}: full name or first_name is required."
 
+    skill_items = fuzzy_items(row, "main field", "skill")
     skill_values = []
-    skill_values.extend(fuzzy_values(row, "main field", "skill"))
+    skill_values.extend(value for _key, value in skill_items)
     skill_values.extend(fuzzy_values(row, "computer skill level"))
     skill_values = [value for value in skill_values if value and value.lower() not in {"none", "n/a", "na"}]
 
-    experience_values = [
-        decimal_from_text(value)
-        for value in fuzzy_values(row, "years", "work experience")
-    ]
+    year_items = fuzzy_items(row, "years", "work experience")
+    detail_items = fuzzy_items(row, "details", "work experience")
+    experience_values = [decimal_from_text(value) for _key, value in year_items]
     experience_values = [value for value in experience_values if value is not None]
     years_experience = max(experience_values) if experience_values else Decimal("0")
 
-    work_details = fuzzy_values(row, "details", "work experience")
+    work_details = [value for _key, value in detail_items]
     education_parts = [
         first_available(row, fuzzy_patterns=(("highest level", "education"),)),
         first_available(row, fuzzy_patterns=(("field of study",),)),
@@ -215,7 +228,93 @@ def import_sarp_candidate(row, index):
         "status": Candidate.Status.ACTIVE,
     }
     candidate, was_created = Candidate.objects.update_or_create(email=email, defaults=defaults)
+    upsert_sarp_profile(candidate, row)
+    upsert_sarp_skills_and_experience(candidate, skill_items, year_items, detail_items)
     return was_created, None
+
+
+def upsert_sarp_profile(candidate, row):
+    profile_defaults = {
+        "raw_answers": {base_label(key): value for key, value in row.items()},
+        "gender": first_available(row, fuzzy_patterns=(("gender",),)),
+        "date_of_birth": first_available(row, fuzzy_patterns=(("date of birth",),)),
+        "aims_number": first_available(row, fuzzy_patterns=(("aims number",),)),
+        "nationality": first_available(row, fuzzy_patterns=(("nationality",),)),
+        "arrival_year": first_available(row, fuzzy_patterns=(("year", "arrive"),)),
+        "majlis": first_available(row, fuzzy_patterns=(("majlis",),)),
+        "unhcr_registration": first_available(row, fuzzy_patterns=(("unhcr",), ("online registration",))),
+        "marital_status": first_available(row, fuzzy_patterns=(("marital status",),)),
+        "education_level": first_available(row, fuzzy_patterns=(("highest level", "education"),)),
+        "field_of_study": first_available(row, fuzzy_patterns=(("field of study",),)),
+        "institution": first_available(row, fuzzy_patterns=(("university",), ("institution name",))),
+        "education_year": first_available(row, fuzzy_patterns=(("year of completion",),)),
+        "education_country": first_available(row, fuzzy_patterns=(("country where", "obtained"),)),
+        "education_verified": first_available(row, fuzzy_patterns=(("educational documents", "verified"),)),
+        "english_speaking": first_available(row, fuzzy_patterns=(("speak english",),)),
+        "english_reading_writing": first_available(row, fuzzy_patterns=(("read and write", "english"),)),
+        "english_test": first_available(row, fuzzy_patterns=(("english language proficiency tests",),)),
+        "english_score": first_available(row, fuzzy_patterns=(("what was your score",),)),
+        "basic_computer_skills": first_available(row, fuzzy_patterns=(("basic computer skills",),)),
+        "computer_skill_level": first_available(row, fuzzy_patterns=(("computer skill level",),)),
+        "willing_to_migrate": first_available(row, fuzzy_patterns=(("willing to migrate",),)),
+        "migration_countries": first_available(row, fuzzy_patterns=(("countries", "interested", "migrating"),)),
+        "migration_reason": first_available(row, fuzzy_patterns=(("why did you choose",),)),
+        "health_conditions": first_available(row, fuzzy_patterns=(("health conditions",),)),
+        "linkedin_url": first_available(row, fuzzy_patterns=(("linkedin",),)),
+        "valid_passport": first_available(row, fuzzy_patterns=(("valid passport",),)),
+        "passport_expiry": first_available(row, fuzzy_patterns=(("expiry date",),)),
+        "can_find_own_employer": first_available(row, fuzzy_patterns=(("find your own employer",),)),
+        "source": first_available(row, fuzzy_patterns=(("how did you hear",),)),
+        "consent_truthful": first_available(row, fuzzy_patterns=(("accurate", "truthful"),)),
+        "consent_database": first_available(row, fuzzy_patterns=(("database purposes",),)),
+        "consent_share": first_available(row, fuzzy_patterns=(("share my profile",),)),
+        "consent_contact": first_available(row, fuzzy_patterns=(("contacted via",),)),
+        "consent_more_documents": first_available(row, fuzzy_patterns=(("additional documentation",),)),
+        "consent_data_storage": first_available(row, fuzzy_patterns=(("personal data", "stored"),)),
+        "photo_document_upload": first_available(row, fuzzy_patterns=(("upload a photo",),)),
+        "resume_upload": first_available(row, fuzzy_patterns=(("upload resume",),)),
+        "education_upload": first_available(row, fuzzy_patterns=(("upload educational",),)),
+        "certification_upload": first_available(row, fuzzy_patterns=(("upload professional",),)),
+        "additional_notes": "\n".join(
+            value
+            for value in [
+                first_available(row, fuzzy_patterns=(("anything else we should know",),)),
+                first_available(row, fuzzy_patterns=(("skills experience or situation",),)),
+            ]
+            if value
+        ),
+    }
+    CandidateProfile.objects.update_or_create(candidate=candidate, defaults=profile_defaults)
+
+
+def upsert_sarp_skills_and_experience(candidate, skill_items, year_items, detail_items):
+    CandidateSkill.objects.filter(candidate=candidate).delete()
+    CandidateExperience.objects.filter(candidate=candidate).delete()
+    max_len = max(len(skill_items), len(year_items), len(detail_items), 0)
+    seen_skills = set()
+    for index in range(max_len):
+        skill = skill_items[index][1] if index < len(skill_items) else ""
+        year_value = decimal_from_text(year_items[index][1]) if index < len(year_items) else None
+        detail = detail_items[index][1] if index < len(detail_items) else ""
+        source = base_label(skill_items[index][0]) if index < len(skill_items) else ""
+        if skill:
+            skill_key = skill.lower().strip()
+            if skill_key not in seen_skills:
+                CandidateSkill.objects.create(
+                    candidate=candidate,
+                    name=skill,
+                    years_experience=year_value,
+                    source_label=source,
+                )
+                seen_skills.add(skill_key)
+        if skill or detail:
+            CandidateExperience.objects.create(
+                candidate=candidate,
+                skill=skill,
+                years_experience=year_value,
+                details=detail,
+                source_label=source,
+            )
 
 
 def decimal_from_text(value):
